@@ -14,4 +14,5 @@ generate:
 	jsonnet -S $(JSONNET_JPATH) --multi . $(OPSFOLIO_DEFN_JSONNET) > $(OPSFOLIO_DEFN_JSONNET_GENERATED_FILES_LIST)
 	cat $(OPSFOLIO_DEFN_JSONNET_GENERATED_FILES_LIST)  | sed 's/^\.\//  > /'
 configure: generate
-	   /bin/bash $(OPS_CONF_DIR)/create-opsfolio-db-and-configure-osquery.sh & 
+	   chmod 755 $(OPS_CONF_DIR)/create-opsfolio-db-and-configure-osquery.sh
+	   /bin/bash $(OPS_CONF_DIR)/create-opsfolio-db-and-configure-osquery.sh  
