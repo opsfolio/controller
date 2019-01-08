@@ -1,0 +1,16 @@
+{
+    "auto_table_construction" : {
+        "raci_matrix" : {
+            "query" : "select asset,asset_responsible,asset_accountable,asset_informed FROM raci_matrix",
+            "path" : "/var/lib/opsfolio/opsfolio-core.db",
+            "columns" : ["asset", "asset_responsible", "asset_accountable", "asset_informed"]
+        },
+		
+		"asset_risk" : {
+            "query" : "select asset,threat_event,threat_source,relevance,likelihood,impact,risk FROM asset_risk",
+            "path" : "/var/lib/opsfolio/opsfolio-core.db",
+            "columns" : ["asset", "threat_event", "threat_source", "relevance", "likelihood", "impact", "risk"]
+        }
+    }
+	
+}
