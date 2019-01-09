@@ -1,10 +1,10 @@
 # Opsfolio osQuery ATC
-Opsfolio is an [RSMF](/shah/rdbms-schema-migration-framework) based schema migration configuration built for osQuery ATC to 
+Opsfolio is an [RSMF](https://github.com/shah/rdbms-schema-migration-framework) based schema migration configuration built for osQuery ATC to 
 help manage custom properties useful for managing operational portfolios.
 
 ## Setup
 
-First, install [RSMF](/shah/rdbms-schema-migration-framework).
+First, install [RSMF](https://github.com/shah/rdbms-schema-migration-framework).
 Then, symlink the RSMF/lib/Makefile in the root folder
 Finally, run "make configure" to create the schema migration files.
 
