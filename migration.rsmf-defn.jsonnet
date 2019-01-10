@@ -1,11 +1,14 @@
+local context = import "context.rsmf-facts.json";
 local rsmf = import "rsmf.libsonnet";
 local columnTypes = rsmf.columnTypes;
 local tableTypes = rsmf.tableTypes;
 
-local opsfolioDBHome = "/var/lib/opsfolio";
+local opsfolioDBHome = context.migrationDefnHome;
+local opsfolioCoreDBName = "opsfolio-core";
+local osQueryConfigSuffix = "-osquery-config.json";
 
 local core = {
-    databaseName : "opsfolio-core",
+    databaseName : opsfolioCoreDBName,
     tables : [
         tableTypes.enum('opsfolio_asset_risk_type', [
             { code: 'one', value : 'One', abbrev: 'one' },
@@ -34,16 +37,22 @@ local core = {
 };
 
 {
-    "core.sql" : 
+    [opsfolioCoreDBName + ".sql"] : 
         "PRAGMA foreign_keys = ON;\n\n" +
         rsmf.createTablesSQL(core) +
         rsmf.createDataSQL(core),
 
-    "osquery-config.json" : rsmf.osQueryConfigATC(core, opsfolioDBHome + "/%(databaseName)s.db"),
+    [opsfolioCoreDBName + osQueryConfigSuffix] : rsmf.osQueryConfigATC(core, opsfolioDBHome + "/%(databaseName)s.db"),
 
-    "create-opsfolio-db-and-configure-osquery.sh" : |||
-        rm %(opsfolioDBHome)s/opsfolio-core.db
-        cat core.sql | sqlite3 %(opsfolioDBHome)s/opsfolio-core.db
-        osqueryi --verbose --config_path osquery-config.json
-    ||| % { opsfolioDBHome : opsfolioDBHome }
+    ["create-" + opsfolioCoreDBName + "-db.sh"] : |||
+        echo "Removing existing %(opsfolioDBHome)s/%(opsfolioCoreDBName)s.db, if any."
+        rm -f "%(opsfolioDBHome)s/%(opsfolioCoreDBName)s.db"
+        echo "Creating SQLite database %(opsfolioDBHome)s/%(opsfolioCoreDBName)s.db."
+        cat %(opsfolioCoreDBName)s.sql | sqlite3 "%(opsfolioDBHome)s/%(opsfolioCoreDBName)s.db"
+    ||| % { opsfolioDBHome : opsfolioDBHome, opsfolioCoreDBName : opsfolioCoreDBName, osQueryConfigSuffix : osQueryConfigSuffix },
+
+    ["configure-" + opsfolioCoreDBName + "-osquery-ATC.sh"] : |||
+        echo "Saving configuration into osQuery."
+        osqueryi --verbose --config_path %(opsfolioCoreDBName)s-%(osQueryConfigSuffix)s
+    ||| % { opsfolioDBHome : opsfolioDBHome, opsfolioCoreDBName : opsfolioCoreDBName, osQueryConfigSuffix : osQueryConfigSuffix },
 }
