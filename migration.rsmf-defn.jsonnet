@@ -6,6 +6,8 @@ local tableTypes = rsmf.tableTypes;
 local opsfolioDBHome = context.migrationDefnHome;
 local opsfolioCoreDBName = "opsfolio-core";
 local osQueryConfigSuffix = "-osquery-config.json";
+local osQueryHome ="/etc/osquery";
+local opsfolioDirectory = "/opt/opsfolio";
 
 local core = {
     databaseName : opsfolioCoreDBName,
@@ -53,6 +55,7 @@ local core = {
 
     ["configure-" + opsfolioCoreDBName + "-osquery-ATC.sh"] : |||
         echo "Saving configuration into osQuery."
-        osqueryi --verbose --config_path %(opsfolioCoreDBName)s-%(osQueryConfigSuffix)s
-    ||| % { opsfolioDBHome : opsfolioDBHome, opsfolioCoreDBName : opsfolioCoreDBName, osQueryConfigSuffix : osQueryConfigSuffix },
+        ln -sf %(opsfolioDirectory)s/opsfolio-core-osquery-config.json %(osQueryHome)s/osquery.conf
+        /etc/init.d/osqueryd restart
+    ||| % { opsfolioDirectory : opsfolioDirectory, osQueryHome : osQueryHome },
 }
