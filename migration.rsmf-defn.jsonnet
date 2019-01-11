@@ -5,7 +5,7 @@ local tableTypes = rsmf.tableTypes;
 
 local opsfolioDBHome = context.migrationDefnHome;
 local opsfolioCoreDBName = "opsfolio-core";
-local osQueryConfigSuffix = "-osquery-config.json";
+local osQueryConfigSuffix = "-osquery-config.json.conf";
 local osQueryHome ="/etc/osquery";
 local opsfolioDirectory = "/opt/opsfolio";
 
@@ -65,7 +65,7 @@ local core = {
         # Create the %(opsfolioCoreDBName)s osQuery ATC configuration
         create-%(opsfolioCoreDBName)s-osquery-ATC-config: clean-%(opsfolioCoreDBName)s-osquery-ATC-config
         	$(call logInfo,Created $(YELLOW)%(osQueryConfigDPath)s/%(opsfolioCoreDBName)s%(osQueryConfigSuffix)s$(RESET) osQuery ATC configuration)
-        	sudo ln -sf "%(osQueryConfigDPath)s/%(opsfolioCoreDBName)s%(osQueryConfigSuffix)s" "%(migrationDefnHome)s/%(opsfolioCoreDBName)s%(osQueryConfigSuffix)s"
+        	sudo ln -sf "%(migrationDefnHome)s/%(opsfolioCoreDBName)s%(osQueryConfigSuffix)s" "%(osQueryConfigDPath)s/%(opsfolioCoreDBName)s%(osQueryConfigSuffix)s"
         	$(call logInfo,Restarted osQuery)
         	sudo /etc/init.d/osqueryd restart
 
