@@ -46,16 +46,44 @@ local core = {
 
     [opsfolioCoreDBName + osQueryConfigSuffix] : rsmf.osQueryConfigATC(core, opsfolioDBHome + "/%(databaseName)s.db"),
 
-    ["create-" + opsfolioCoreDBName + "-db.sh"] : |||
-        echo "Removing existing %(opsfolioDBHome)s/%(opsfolioCoreDBName)s.db, if any."
-        rm -f "%(opsfolioDBHome)s/%(opsfolioCoreDBName)s.db"
-        echo "Creating SQLite database %(opsfolioDBHome)s/%(opsfolioCoreDBName)s.db."
-        cat %(opsfolioCoreDBName)s.sql | sqlite3 "%(opsfolioDBHome)s/%(opsfolioCoreDBName)s.db"
-    ||| % { opsfolioDBHome : opsfolioDBHome, opsfolioCoreDBName : opsfolioCoreDBName, osQueryConfigSuffix : osQueryConfigSuffix },
+    [context.makeFile.customTargetsIncludeFile] : |||
+        # Delete the %(opsfolioCoreDBName)s SQLite database
+        clean-%(opsfolioCoreDBName)s-db:
+        	$(call logInfo,Deleted $(YELLOW)%(opsfolioDBHome)s/%(opsfolioCoreDBName)s.db$(RESET) SQLite database)
+        	rm -f "%(opsfolioDBHome)s/%(opsfolioCoreDBName)s.db"
 
-    ["configure-" + opsfolioCoreDBName + "-osquery-ATC.sh"] : |||
-        echo "Saving configuration into osQuery."
-        ln -sf %(opsfolioDirectory)s/opsfolio-core-osquery-config.json %(osQueryHome)s/osquery.conf
-        /etc/init.d/osqueryd restart
-    ||| % { opsfolioDirectory : opsfolioDirectory, osQueryHome : osQueryHome },
+        # Create the %(opsfolioCoreDBName)s SQLite database
+        create-%(opsfolioCoreDBName)s-db: clean-%(opsfolioCoreDBName)s-db
+        	$(call logInfo,Created SQLite database $(YELLOW)%(opsfolioDBHome)s/%(opsfolioCoreDBName)s.db$(RESET))
+        	cat %(opsfolioCoreDBName)s.sql | sqlite3 "%(opsfolioDBHome)s/%(opsfolioCoreDBName)s.db"
+
+        # Remove the %(opsfolioCoreDBName)s osQuery ATC configuration
+        clean-%(opsfolioCoreDBName)s-osquery-ATC-config:
+        	$(call logInfo,Removed $(YELLOW)%(osQueryConfigDPath)s/%(opsfolioCoreDBName)s%(osQueryConfigSuffix)s$(RESET) osQuery ATC configuration)
+        	sudo rm -f "%(osQueryConfigDPath)s/%(opsfolioCoreDBName)s%(osQueryConfigSuffix)s"
+
+        # Create the %(opsfolioCoreDBName)s osQuery ATC configuration
+        create-%(opsfolioCoreDBName)s-osquery-ATC-config: clean-%(opsfolioCoreDBName)s-osquery-ATC-config
+        	$(call logInfo,Created $(YELLOW)%(osQueryConfigDPath)s/%(opsfolioCoreDBName)s%(osQueryConfigSuffix)s$(RESET) osQuery ATC configuration)
+        	sudo ln -sf "%(osQueryConfigDPath)s/%(opsfolioCoreDBName)s%(osQueryConfigSuffix)s" "%(migrationDefnHome)s/%(opsfolioCoreDBName)s%(osQueryConfigSuffix)s"
+        	$(call logInfo,Restarted osQuery)
+        	sudo /etc/init.d/osqueryd restart
+
+        ## Create the Opsfolio database(s)
+        create-db: create-%(opsfolioCoreDBName)s-db
+
+        ## Setup osQuery with Opsfolio ATCs
+        create-osQuery-ATC: create-%(opsfolioCoreDBName)s-osquery-ATC-config
+
+        ## Create the Opsfolio database and create osQuery ATC configuration
+        opsfolio: create-db create-osQuery-ATC
+    ||| % { 
+        opsfolioDirectory : opsfolioDirectory, 
+        osQueryHome : osQueryHome,
+        osQueryConfigSuffix : osQueryConfigSuffix,
+        opsfolioDBHome : opsfolioDBHome, 
+        opsfolioCoreDBName : opsfolioCoreDBName,
+        osQueryConfigDPath : context.osQuery.configDPath,
+        migrationDefnHome : context.migrationDefnHome
+    },
 }
