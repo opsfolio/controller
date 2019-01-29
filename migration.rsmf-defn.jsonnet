@@ -34,6 +34,52 @@ local core = {
             columnTypes.text('impact'),
             columnTypes.text('risk')
         ]),
+		
+		tableTypes.typical('opsfolio_vulnerability', [
+            columnTypes.identity(),
+            columnTypes.enum('opsfolio_vulnerability', name = 'vulnerability_id', required=true),
+            columnTypes.text('short_name'),
+            columnTypes.text('source'),
+            columnTypes.text('affected_software'),
+            columnTypes.text('reference'),
+            columnTypes.text('status'),
+			columnTypes.text('patch_availability'),
+            columnTypes.text('severity'),
+            columnTypes.text('solutions'),
+            columnTypes.text('tags'),
+            columnTypes.text('description'),
+        ]),
+		
+		tableTypes.typical('opsfolio_billing', [
+            columnTypes.identity(),
+            columnTypes.enum('billing_type', name = 'billing_id', required=true),
+            columnTypes.text('purpose'),
+            columnTypes.text('bill_rate'),
+            columnTypes.text('period'),
+            columnTypes.text('effective_from_date'),
+            columnTypes.text('effective_to_date')
+			cloumnTypes.integer ('prorate')
+        ]),
+		
+		tableTypes.typical('opsfolio_scheduled_tasks', [
+            columnTypes.identity(),
+            columnTypes.enum('scheduled_tasks', name = 'scheduled_task_id', required=true),
+            columnTypes.text('description'),
+            columnTypes.text('task_date'),
+            columnTypes.text('reminder_date'),
+            columnTypes.text('assigned_to'),
+            columnTypes.text('reminder_to')		
+        ]),
+		
+		tableTypes.typical('opsfolio_timesheet', [
+            columnTypes.identity(),
+            columnTypes.enum('opsfolio_timesheet', name = 'opsfolio_timesheet_id', required=true),
+            columnTypes.integer('time_hour'),
+            columnTypes.text('timesheet_summary'),
+            columnTypes.text('start_time'),
+            columnTypes.text('end_time')		
+        ]),
+			
     ],
     data : import "opsfolio-core.rsmf-data.jsonnet"
 };
