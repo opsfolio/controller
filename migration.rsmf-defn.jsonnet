@@ -117,6 +117,49 @@ local core = {
 	    columnTypes.integer('description'),
         
         ]),
+	
+        tableTypes.typical('opsfolio_devices', [
+            columnTypes.identity(),
+            columnTypes.text('device_name'),
+            columnTypes.text('short_name'),
+            columnTypes.text('barcode'),
+            columnTypes.text('model'),
+            columnTypes.text('serial_number'),
+            columnTypes.text('firmware'),
+            columnTypes.text('data_center'),
+            columnTypes.text('location'),
+            columnTypes.text('purpose'),
+            columnTypes.integer('description'),
+
+        ]),
+
+        tableTypes.typical('opsfolio_threat_sources', [
+            columnTypes.identity(),
+            columnTypes.text('threat_source'),
+            columnTypes.text('identifier'),
+            columnTypes.text('threat_source_type'),
+            columnTypes.text('source_of_information'),
+            columnTypes.text('capability'),
+            columnTypes.text('intent'),
+            columnTypes.text('targeting'),
+            columnTypes.integer('description'),
+
+        ]), 
+
+        tableTypes.typical('opsfolio_threat_events', [
+            columnTypes.identity(),
+            columnTypes.text('threat_event'),
+            columnTypes.text('identifier'),
+            columnTypes.integer('threat_event_type'),
+            columnTypes.text('event_classification'),
+            columnTypes.text('source_of_information'),
+            columnTypes.integer('description'),
+
+        ]),
+
+
+
+
 			
     ],
     data : import "opsfolio-core.rsmf-data.jsonnet"
