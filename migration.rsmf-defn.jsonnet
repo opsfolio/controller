@@ -88,8 +88,8 @@ local core = {
             columnTypes.text('certificate_authority'),
             columnTypes.text('validity'),
             columnTypes.datetime('expiration_date'),
-		    columnTypes.text('domain_name'),
-			columnTypes.integer('key_size'),
+	    columnTypes.text('domain_name'),
+       	    columnTypes.integer('key_size'),
             columnTypes.text('path'),		
         ]),
 	
@@ -98,7 +98,7 @@ local core = {
             columnTypes.text('title'),
             columnTypes.text('body'),
             columnTypes.text('comments'),
-			columnTypes.text('tags')
+	    columnTypes.text('tags')
         ]),	
 	
 	tableTypes.typical('opsfolio_medical_devices', [
@@ -107,14 +107,14 @@ local core = {
             columnTypes.text('short_name'),
             columnTypes.text('unique_device_number'),
             columnTypes.text('device_category'),
-			columnTypes.text('device_secret_key'),
+	    columnTypes.text('device_secret_key'),
             columnTypes.text('vendor_name'),
             columnTypes.text('manufacturer'),
             columnTypes.datetime('expiry_date'),
-			columnTypes.datetime('implant_date'),
-			columnTypes.datetime('deactivation_date'),
-		    columnTypes.text('purpose'),
-			columnTypes.integer('description'),
+	    columnTypes.datetime('implant_date'),
+	    columnTypes.datetime('deactivation_date'),
+	    columnTypes.text('purpose'),
+	    columnTypes.integer('description'),
         
         ]),
 			

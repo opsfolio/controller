@@ -10,5 +10,11 @@
     ],
     opsfolio_scheduled_tasks : [
         {   description: 'some_task', task_date : '30-01-2019:10:10:10', reminder_date : '29-01-2019:10:10:10', assigned_to : 'someone@mail.com', reminder_to : 'someone@mail.com'  }
-    ],
+    ], 
+    opsfolio_certificates : [
+	{ certificate_name: 'test', certificate_category: 'public', certificate_type : 'letsencrypt', certificate_authority: 'letsencrypt', validity : '3 months', expiration_date : '03-03-2019', domain_name : 'test.com', key_size : 2048, path: '/etc/letsencrypt/cert/public.pem' }
+   ],
+    opsfolio_blog : [
+	{ title : 'blog_title', body: 'some_data', comments: 'notes on data', tags :'#test,#blog' }
+  ],
 }
