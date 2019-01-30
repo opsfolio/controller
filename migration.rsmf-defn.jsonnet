@@ -78,6 +78,45 @@ local core = {
             columnTypes.text('start_time'),
             columnTypes.text('end_time'),		
         ]),
+	
+	tableTypes.typical('opsfolio_certificates', [
+            columnTypes.identity(),
+            columnTypes.text('certificate_name'),
+            columnTypes.text('short_name'),
+            columnTypes.text('certificate_category'),
+            columnTypes.text('certificate_type'),
+            columnTypes.text('certificate_authority'),
+            columnTypes.text('validity'),
+            columnTypes.datetime('expiration_date'),
+		    columnTypes.text('domain_name'),
+			columnTypes.integer('key_size'),
+            columnTypes.text('path'),		
+        ]),
+	
+	tableTypes.typical('opsfolio_blog', [
+            columnTypes.identity(),
+            columnTypes.text('title'),
+            columnTypes.text('body'),
+            columnTypes.text('comments'),
+			columnTypes.text('tags')
+        ]),	
+	
+	tableTypes.typical('opsfolio_medical_devices', [
+            columnTypes.identity(),
+            columnTypes.text('device_name '),
+            columnTypes.text('short_name'),
+            columnTypes.text('unique_device_number'),
+            columnTypes.text('device_category'),
+			columnTypes.text('device_secret_key'),
+            columnTypes.text('vendor_name'),
+            columnTypes.text('manufacturer'),
+            columnTypes.datetime('expiry_date'),
+			columnTypes.datetime('implant_date'),
+			columnTypes.datetime('deactivation_date'),
+		    columnTypes.text('purpose'),
+			columnTypes.integer('description'),
+        
+        ]),
 			
     ],
     data : import "opsfolio-core.rsmf-data.jsonnet"
