@@ -24,7 +24,7 @@ import * as model from "./models/common.gim.ts";
 export function determineVersion(importMetaURL: string): Promise<string> {
   return gsv.determineVersionFromRepoTag(
     importMetaURL,
-    { repoIdentity: "opsfolio/cli" },
+    { repoIdentity: "opsfolio/controller" },
   );
 }
 
