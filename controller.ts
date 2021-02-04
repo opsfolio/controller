@@ -37,7 +37,8 @@ export interface CommandHandlerCaller {
 
 export function defaultDocoptSpec(caller: CommandHandlerCaller): string {
   const targetable = "[<target>]...";
-  const usesSqliteDB = "[--db=<db-file>]...";
+  const usesSingleSqliteDB = "[--db=<db-file>]";
+  const usesMultipleSqliteDBs = "[--db=<db-file>]...";
   const observable = "[--verbose] [--dry-run]";
   const transactionID = "[--tx-id=<uuid>]";
   const hookable = `[--hooks=<glob>]... [--arg=<name>]... [--argv=<value>]...`;
@@ -45,13 +46,13 @@ export function defaultDocoptSpec(caller: CommandHandlerCaller): string {
 Opsfolio ${caller.version}.
 
 Usage:
-  opsfolio sql [<sql-dest-file>] ${targetable} ${transactionID} ${observable}
-  opsfolio sqlite describe ${targetable} ${usesSqliteDB} ${transactionID} ${observable}
-  opsfolio sqlite clean ${targetable} ${usesSqliteDB} ${transactionID} ${observable}
-  opsfolio osquery atc init ${usesSqliteDB} ${transactionID} ${hookable} ${observable}
+  opsfolio inspect sql ${targetable} ${hookable}
+  opsfolio sqlite create ${targetable} ${usesSingleSqliteDB} ${transactionID} ${observable}
+  opsfolio sqlite describe ${targetable} ${usesMultipleSqliteDBs} ${transactionID} ${observable}
+  opsfolio sqlite clean ${targetable} ${usesMultipleSqliteDBs} ${transactionID} ${observable}
+  opsfolio osquery atc init ${usesMultipleSqliteDBs} ${transactionID} ${hookable} ${observable}
   opsfolio osquery atc clean ${transactionID} ${hookable} ${observable}
-  opsfolio clean ${targetable} ${usesSqliteDB} ${transactionID} ${hookable} ${observable}
-  opsfolio inspect ${targetable} ${hookable}
+  opsfolio clean ${targetable} ${usesMultipleSqliteDBs} ${transactionID} ${hookable} ${observable}
   opsfolio doctor ${targetable} ${hookable} 
   opsfolio version ${targetable} ${hookable}
   opsfolio -h | --help
@@ -400,6 +401,65 @@ export class OpsfolioControllerPluginsManager<
   }
 }
 
+export class StringArrayPersistenceHandler implements ap.PersistenceHandler {
+  readonly results: ap.PersistenceResult[] = [];
+  readonly resultsMap: Map<string, ap.PersistenceResult> = new Map();
+  readonly text: string[] = [];
+
+  constructor() {}
+
+  createMutableTextArtifact(
+    ctx: cm.Context,
+    options: ap.MutableTextArtifactOptions,
+  ): ap.MutableTextArtifact {
+    return new ap.DefaultTextArtifact(options);
+  }
+
+  public persistTextArtifact(
+    ctx: cm.Context,
+    artifactName: vm.TextValue,
+    artifact: ap.TextArtifact,
+    options?: ap.PersistArtifactOptions,
+  ): ap.PersistenceResult {
+    this.text.push(artifact.text(ctx));
+    const finalLogical = vm.resolveTextValue(ctx, artifactName);
+    const exists = this.resultsMap.get(finalLogical);
+    if (!exists) {
+      const pr = {
+        origArtifactName: artifactName,
+        finalArtifactNameLogical: finalLogical,
+        finalArtifactNamePhysical: finalLogical,
+        finalArtifactNamePhysicalRel: finalLogical,
+        finalArtifactNamePhysicalAbs: finalLogical,
+        artifactText: artifact.text(ctx),
+        artifacts: [artifact],
+        overwroteExisting: [],
+      };
+      this.resultsMap.set(finalLogical, pr);
+      this.results.push(pr);
+      return pr;
+    } else {
+      const pr = {
+        ...exists,
+        artifactText: exists.artifactText + artifact.textFragment(ctx),
+        artifacts: [...exists.artifacts, artifact],
+      };
+      this.resultsMap.set(finalLogical, pr);
+      return pr;
+    }
+  }
+
+  handleError(
+    ctx: cm.Context,
+    artifactName: vm.TextValue,
+    artifact: ap.TextArtifact,
+    code: number,
+    message: string,
+  ): void {
+    console.error(`[${code}] ${message} (${artifactName})`);
+  }
+}
+
 export class OpsfolioController implements ex.PluginExecutive {
   readonly pluginsMgr: OpsfolioControllerPluginsManager<
     OpsfolioControllerOptions,
@@ -547,9 +607,7 @@ export class OpsfolioController implements ex.PluginExecutive {
     );
   }
 
-  async generateSQL() {
-    const { "<sql-dest-file>": sqlDestFileArg } = this.cli.cliArgs;
-    const destFileName = sqlDestFileArg || "-";
+  async inspectSQL(destFileName = "-") {
     if (destFileName == "-") {
       const ph = new ap.ConsolePersistenceHandler();
       const [ctx, imt] = gimtr.transformRdbmsModel(
@@ -560,45 +618,128 @@ export class OpsfolioController implements ex.PluginExecutive {
       );
     } else {
       // TODO allow saving SQL to a file
-      throw new Error("Not implemented yet");
+      throw new Error("Saving SQL to a file not implemented yet");
     }
   }
 
-  // deno-lint-ignore require-await
-  async sqliteDescribe() {
-    const { "--db": databasesArg } = this.cli.cliArgs;
-    if (Array.isArray(databasesArg)) {
-      databasesArg.forEach(async (db) => {
-        if (fs.existsSync(db)) {
-          const updatePkgs = this.reportShellCmd(
-            `sqlite3 ${db} ".list"`,
-          );
-          await shell.runShellCommand(updatePkgs, {
-            ...(this.oco.isVerbose
-              ? shell.cliVerboseShellOutputOptions
-              : shell.quietShellOutputOptions),
-            dryRun: this.oco.isDryRun,
-          });
-        }
+  async sqlite(
+    dbFileName: string,
+    options: {
+      stdin?: (writer: Deno.Writer) => Promise<void>;
+      isSuccess?: (code: number, dbFileName: string) => boolean;
+      onSuccess?: (stdout: Uint8Array, dbFileName: string) => void;
+      onError?: (
+        stderr: Uint8Array,
+        dbFileName: string,
+        stdout: Uint8Array,
+      ) => void;
+    } = {},
+  ) {
+    const sqliteCmd = "sqlite3";
+    if (!this.oco.isDryRun) {
+      const p = Deno.run({
+        cmd: [sqliteCmd, dbFileName],
+        // Enable pipe between processes
+        stdin: options.stdin ? "piped" : undefined,
+        stdout: "piped",
+        stderr: "piped",
       });
+      if (!p.stdin) throw Error();
+
+      if (options.stdin) {
+        await options.stdin(p.stdin);
+        p.stdin.close();
+      }
+
+      const isSuccess = options.isSuccess
+        ? options.isSuccess
+        : (code: number, dbFileName: string) => {
+          return code === 0;
+        };
+      const { code } = await p.status();
+      const stdout = await p.output();
+      const stderr = await p.stderrOutput();
+      if (isSuccess(code, dbFileName)) {
+        if (options.onSuccess) options.onSuccess(stdout, dbFileName);
+      } else {
+        if (options.onError) options.onError(stderr, dbFileName, stdout);
+      }
+    } else {
+      console.log(sqliteCmd, dbFileName);
     }
   }
 
-  // deno-lint-ignore require-await
-  async sqliteClean() {
-    const { "--db": databasesArg } = this.cli.cliArgs;
-    if (Array.isArray(databasesArg)) {
-      databasesArg.forEach((db) => {
-        if (fs.existsSync(db)) {
-          if (!this.oco.isDryRun) {
-            Deno.removeSync(db);
-          }
-          if (this.oco.isDryRun || this.oco.isVerbose) {
-            console.log("rm -f", colors.yellow(db));
-          }
-        }
-      });
+  async sqliteCreate(dbFileName: string) {
+    if (fs.existsSync(dbFileName)) {
+      if (!this.oco.isDryRun) {
+        Deno.removeSync(dbFileName);
+      }
+      if (this.oco.isDryRun || this.oco.isVerbose) {
+        console.log("rm -f", colors.yellow(dbFileName));
+      }
     }
+
+    await this.sqlite(dbFileName, {
+      stdin: async (writer) => {
+        const ph = new StringArrayPersistenceHandler();
+        const [ctx, imt] = gimtr.transformRdbmsModel(
+          gimtr.RdbmsSqlTransformer,
+          await this.informationModelSpec(),
+          dia.SQLiteDialect,
+          ph,
+        );
+        await writer.write(new TextEncoder().encode(ph.text.join("\n")));
+      },
+      onSuccess: this.oco.isVerbose
+        ? (stdout, dbFileName) => {
+          console.log(colors.green("created"), colors.yellow(dbFileName));
+          Deno.stdout.write(stdout);
+        }
+        : undefined,
+      onError: this.oco.isVerbose
+        ? (stderr, dbFileName) => {
+          console.log(colors.red("error creating"), colors.yellow(dbFileName));
+          Deno.stderr.write(stderr);
+        }
+        : undefined,
+    });
+  }
+
+  // deno-lint-ignore require-await
+  async sqliteDescribe(databases: string[]) {
+    databases.forEach(async (db) => {
+      if (fs.existsSync(db)) {
+        await this.sqlite(db, {
+          stdin: async (writer) => {
+            await writer.write(new TextEncoder().encode(".tables"));
+          },
+          onSuccess: this.oco.isVerbose
+            ? (stdout) => {
+              Deno.stdout.write(stdout);
+            }
+            : undefined,
+          onError: this.oco.isVerbose
+            ? (stderr) => {
+              Deno.stderr.write(stderr);
+            }
+            : undefined,
+        });
+      }
+    });
+  }
+
+  // deno-lint-ignore require-await
+  async sqliteClean(databases: string[]) {
+    databases.forEach((db) => {
+      if (fs.existsSync(db)) {
+        if (!this.oco.isDryRun) {
+          Deno.removeSync(db);
+        }
+        if (this.oco.isDryRun || this.oco.isVerbose) {
+          console.log("rm -f", colors.yellow(db));
+        }
+      }
+    });
   }
 
   async osQueryATC() {
@@ -638,12 +779,12 @@ export class OpsfolioController implements ex.PluginExecutive {
   }
 }
 
-export async function sqlHandler(
+export async function inspectHandler(
   ctx: OpsfolioController,
 ): Promise<true | void> {
-  const { "sql": sql } = ctx.cli.cliArgs;
-  if (sql) {
-    await ctx.generateSQL();
+  const { "inspect": inspect, "sql": sql } = ctx.cli.cliArgs;
+  if (inspect && sql) {
+    await ctx.inspectSQL();
     return true;
   }
 }
@@ -651,15 +792,24 @@ export async function sqlHandler(
 export async function sqliteHandler(
   ctx: OpsfolioController,
 ): Promise<true | void> {
-  const { "sqlite": sqlite, "describe": describe, "clean": clean } =
-    ctx.cli.cliArgs;
+  const {
+    "sqlite": sqlite,
+    "create": create,
+    "describe": describe,
+    "clean": clean,
+    "--db": db,
+  } = ctx.cli.cliArgs;
   if (sqlite) {
-    if (describe) {
-      await ctx.sqliteDescribe();
+    if (create && Array.isArray(db) && db.length == 1) {
+      await ctx.sqliteCreate(db[0]);
       return true;
     }
-    if (clean) {
-      await ctx.sqliteClean();
+    if (describe && Array.isArray(db)) {
+      await ctx.sqliteDescribe(db);
+      return true;
+    }
+    if (clean && Array.isArray(db)) {
+      await ctx.sqliteClean(db);
       return true;
     }
   }
@@ -708,7 +858,7 @@ export async function versionHandler(
 }
 
 export const commonHandlers = [
-  sqlHandler,
+  inspectHandler,
   sqliteHandler,
   cleanHandler,
   doctorHandler,
