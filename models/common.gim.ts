@@ -6,6 +6,7 @@ import {
   govnImTypical as gimTyp,
   namespaceMgr as ns,
 } from "./deps.ts";
+import * as boundary from "./boundary.ts";
 
 class CommonModelStructure extends gimTyp.TypicalInfoModelStructure {
   readonly namespace: ns.Namespace;
@@ -16,6 +17,7 @@ class CommonModelStructure extends gimTyp.TypicalInfoModelStructure {
   readonly contactF: models.ContactFactory;
   readonly accountF: models.AccountFactory;
   readonly configFFF: models.ConfigFeatureFlagFactory;
+  readonly boundaryFF: boundary.BoundaryFactory;
 
   constructor(readonly params: gimTyp.TypicalInfoModelStructParams) {
     super(params);
@@ -38,6 +40,7 @@ class CommonModelStructure extends gimTyp.TypicalInfoModelStructure {
     this.configFFF = new models.ConfigFeatureFlagFactory(
       partyRelatedInfoModelParams,
     );
+    this.boundaryFF = new boundary.BoundaryFactory(partyRelatedInfoModelParams);
     this.namespace = params.entityParams.namespace;
     this.entities = [
       ...params.prependEntities,
@@ -70,6 +73,8 @@ class CommonModelStructure extends gimTyp.TypicalInfoModelStructure {
       this.configFFF.configurationValue,
       this.configFFF.configurationMasterOptions,
       this.configFFF.configurationFeatureFlag,
+      this.boundaryFF.boundaryScope,
+      this.boundaryFF.boundary,
       ...params.appendEntities,
     ];
     this.finalize();
